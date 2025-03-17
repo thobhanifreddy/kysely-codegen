@@ -1,6 +1,5 @@
 import { cosmiconfigSync } from 'cosmiconfig';
 import minimist from 'minimist';
-import { resolve } from 'path';
 import type { RuntimeEnumsStyle } from '../generator';
 import { getDialect } from '../generator';
 import { ConnectionStringParser } from '../generator/connection-string-parser';
@@ -26,6 +25,12 @@ const compact = <T extends Record<string, unknown>>(object: T) => {
  */
 export class Cli {
   logLevel = DEFAULT_LOG_LEVEL;
+
+  async generateMultiple(options: Config[]) {
+    for (const option of options) {
+      await this.generate(option);
+    }
+  }
 
   async generate(options: Config) {
     const connectionStringParser = new ConnectionStringParser();
@@ -135,6 +140,7 @@ export class Cli {
   }
 
   #parseString(input: any): string | undefined {
+    console.log('input', input);
     if (input === undefined) return undefined;
     return String(input);
   }
@@ -156,8 +162,8 @@ export class Cli {
 
   parseOptions(
     args: string[],
-    options?: { config?: Config; silent?: boolean },
-  ): Config {
+    options?: { config?: Config[]; silent?: boolean },
+  ) {
     const argv = minimist(args);
     const logLevel = argv['log-level'];
 
@@ -207,79 +213,80 @@ export class Cli {
     const configResult = options?.config
       ? { config: options.config, filepath: null }
       : this.#loadConfig({ configFile });
+    console.log('configResult', configResult);
+
     const configParseResult = configResult
       ? configSchema.safeParse(configResult.config)
       : null;
+
     const configError = configParseResult?.error?.errors[0];
 
     if (configError) {
       throw new ConfigError(configError);
     }
 
-    const config = configParseResult?.data;
-    const configOptions = config
-      ? compact({
+    const configs = configParseResult?.data;
+
+    if (configs) {
+      return configs.map((config) => {
+        const compactCliOptions = compact({
+          camelCase: this.#parseBoolean(argv['camel-case']),
+          dateParser: this.#parseDateParser(argv['date-parser']),
+          defaultSchemas: this.#parseStringArray(argv['default-schema']),
+          dialect: this.#parseDialectName(argv.dialect ?? config.dialect),
+          domains: this.#parseBoolean(argv.domains),
+          envFile: this.#parseString(argv['env-file']),
+          excludePattern: this.#parseString(argv['exclude-pattern']),
+          includePattern: this.#parseString(argv['include-pattern']),
+          logLevel,
+          numericParser: this.#parseNumericParser(argv['numeric-parser']),
+          outFile: this.#parseString(argv['out-file']),
+          overrides:
+            typeof argv.overrides === 'string'
+              ? JSON.parse(argv.overrides)
+              : undefined,
+          partitions: this.#parseBoolean(argv.partitions),
+          print: this.#parseBoolean(argv.print),
+          runtimeEnums: this.#parseRuntimeEnums(argv['runtime-enums']),
+          singularize: this.#parseBoolean(argv.singularize),
+          typeOnlyImports: this.#parseBoolean(argv['type-only-imports']),
+          url: this.#parseString(argv.url ?? config.url),
+          verify: this.#parseBoolean(argv.verify),
+        });
+
+        const print = compactCliOptions.print ?? config.print;
+        const outFile = print
+          ? undefined
+          : (compactCliOptions.outFile ?? config.outFile);
+
+        const generateOptions: Config = {
           ...config,
-          ...(configResult?.filepath && config.outFile
-            ? { outFile: resolve(configResult.filepath, '..', config.outFile) }
-            : {}),
-        })
-      : {};
+          ...compactCliOptions,
+          ...(logLevel === undefined ? {} : { logLevel }),
+          ...(outFile === undefined ? {} : { outFile }),
+        };
+        if (
+          generateOptions.dialect &&
+          !VALID_DIALECTS.includes(generateOptions.dialect)
+        ) {
+          const dialectValues = VALID_DIALECTS.join(', ');
+          throw new RangeError(
+            `Parameter '--dialect' must have one of the following values: ${dialectValues}`,
+          );
+        }
 
-    const cliOptions: Config = compact({
-      camelCase: this.#parseBoolean(argv['camel-case']),
-      dateParser: this.#parseDateParser(argv['date-parser']),
-      defaultSchemas: this.#parseStringArray(argv['default-schema']),
-      dialect: this.#parseDialectName(argv.dialect),
-      domains: this.#parseBoolean(argv.domains),
-      envFile: this.#parseString(argv['env-file']),
-      excludePattern: this.#parseString(argv['exclude-pattern']),
-      includePattern: this.#parseString(argv['include-pattern']),
-      logLevel,
-      numericParser: this.#parseNumericParser(argv['numeric-parser']),
-      outFile: this.#parseString(argv['out-file']),
-      overrides:
-        typeof argv.overrides === 'string'
-          ? JSON.parse(argv.overrides)
-          : undefined,
-      partitions: this.#parseBoolean(argv.partitions),
-      print: this.#parseBoolean(argv.print),
-      runtimeEnums: this.#parseRuntimeEnums(argv['runtime-enums']),
-      singularize: this.#parseBoolean(argv.singularize),
-      typeOnlyImports: this.#parseBoolean(argv['type-only-imports']),
-      url: this.#parseString(argv.url),
-      verify: this.#parseBoolean(argv.verify),
-    });
-
-    const print = cliOptions.print ?? configOptions.print;
-    const outFile = print
-      ? undefined
-      : (cliOptions.outFile ?? configOptions.outFile);
-
-    const generateOptions: Config = {
-      ...configOptions,
-      ...cliOptions,
-      ...(logLevel === undefined ? {} : { logLevel }),
-      ...(outFile === undefined ? {} : { outFile }),
-    };
-
-    if (
-      generateOptions.dialect &&
-      !VALID_DIALECTS.includes(generateOptions.dialect)
-    ) {
-      const dialectValues = VALID_DIALECTS.join(', ');
-      throw new RangeError(
-        `Parameter '--dialect' must have one of the following values: ${dialectValues}`,
-      );
+        return generateOptions;
+      });
     }
 
-    return generateOptions;
+    throw new Error('No config found');
   }
 
-  async run(options?: { argv?: string[]; config?: Config }) {
+  async run(options?: { argv?: string[]; config?: Config[] }) {
     const generateOptions = this.parseOptions(options?.argv ?? [], {
       config: options?.config,
     });
-    return await this.generate(generateOptions);
+
+    return await this.generateMultiple(generateOptions);
   }
 }
