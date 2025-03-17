@@ -140,7 +140,6 @@ export class Cli {
   }
 
   #parseString(input: any): string | undefined {
-    console.log('input', input);
     if (input === undefined) return undefined;
     return String(input);
   }
@@ -213,7 +212,6 @@ export class Cli {
     const configResult = options?.config
       ? { config: options.config, filepath: null }
       : this.#loadConfig({ configFile });
-    console.log('configResult', configResult);
 
     const configParseResult = configResult
       ? configSchema.safeParse(configResult.config)
