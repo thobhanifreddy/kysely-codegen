@@ -1,3 +1,9 @@
+> # ⚠️ WARNING ⚠️
+>
+> **This is just a fork of https://github.com/RobinBlomberg/kysely-codegen**
+>
+> **Why this fork?** This fork was created to support easy multiple database type generation as discussed [in this GitHub discussion](https://github.com/RobinBlomberg/kysely-codegen/discussions/246). The original package doesn't currently support generating types from multiple databases in a straightforward way.
+
 # ![kysely-codegen](./assets/kysely-codegen-logo.svg) <!-- omit from toc -->
 
 `kysely-codegen` generates Kysely type definitions from your database. That's it.
