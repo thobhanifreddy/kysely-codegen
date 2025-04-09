@@ -1,6 +1,6 @@
 {
-  "name": "kysely-codegen",
-  "version": "0.18.3",
+  "name": "@thobhanifreddy/kysely-codegen",
+  "version": "0.18.6",
   "author": "Robin Blomberg",
   "license": "MIT",
   "main": "./dist/index.js",
@@ -23,9 +23,6 @@
     "ci:build": "pnpm build",
     "ci:eslint": "pnpm lint:eslint --max-warnings=0 --report-unused-disable-directives",
     "ci:prettier": "pnpm lint:prettier",
-    "ci:spelling": "cspell-cli -e dist -e pnpm-lock.yaml -e '*.svg' .",
-    "ci:test": "pnpm test",
-    "ci:unused": "knip",
     "dev": "tsx watch ./src/cli/bin.ts",
     "docker:up": "docker-compose up -d",
     "fix": "run-s fix:*",
@@ -96,34 +93,34 @@
   },
   "peerDependenciesMeta": {
     "@libsql/kysely-libsql": {
-      "optional": true
+      "optional": false
     },
     "@tediousjs/connection-string": {
-      "optional": true
+      "optional": false
     },
     "better-sqlite3": {
-      "optional": true
+      "optional": false
     },
     "kysely": {
       "optional": false
     },
     "kysely-bun-sqlite": {
-      "optional": true
+      "optional": false
     },
     "kysely-bun-worker": {
-      "optional": true
+      "optional": false
     },
     "mysql2": {
-      "optional": true
+      "optional": false
     },
     "pg": {
-      "optional": true
+      "optional": false
     },
     "tarn": {
-      "optional": true
+      "optional": false
     },
     "tedious": {
-      "optional": true
+      "optional": false
     }
   },
   "eslintConfig": {
@@ -172,5 +169,8 @@
       "tedious"
     ]
   },
-  "prettier": "@robinblomberg/prettier-config"
+  "prettier": "@robinblomberg/prettier-config",
+  "publishConfig": {
+    "access": "public"
+  }
 }
